@@ -1,0 +1,511 @@
+#machine 
+
+#linear reg
+install.packages('corrgram')
+install.packages('corrplot')
+
+install.packages("caTools")
+library(corrgram)
+library(corrplot)
+library(caTools)
+
+df <- read.csv('C:/Users/singh/Documents/student-mat.csv',sep = ';')
+df
+#for cleaning
+any(is.na(df))
+
+num.cols <- sapply(df, is.numeric)
+cor.data <- cor(df[,num.cols])
+print(cor.data)
+print(corrplot(cor.data,method='color'))
+
+
+#using corrgram
+corrgram(df,order = TRUE,lower.panel = panel.pie,upper.panel = panel.pie,text.panel = panel.txt)
+
+
+ggplot(df,aes(x=G3))+geom_histogram(bins = 20,alpha=0.5,fill='blue')
+
+
+#building a model
+
+set.seed(101)
+sample <- sample.split(df$G3,SplitRatio = 0.7)
+train <- subset(df,sample==TRUE)
+test <- subset(df,sample=FALSE)
+model <- lm(G3~.,data = train)
+summary(model)
+
+res <- residuals(model)
+res <- as.data.frame(res)
+head(res)
+ggplot(res,aes(x=res))+geom_histogram(fill='blue')
+
+
+model <- lm(G3~.,data=train)
+plot(model)
+
+G3.pred <- predict(model,test)
+results <- cbind(G3.pred,test$G3)
+colnames(results) <- c('predicted','actual')
+results <-as.data.frame(results)
+head(results)
+
+
+# taking care of -ve 
+
+
+
+
+
+to_zero <- function(x){
+  if (x<0){
+    return (0)
+  }else{
+    return (x)
+  }
+}
+
+
+
+results$predicted <- sapply(results$predicted ,to_zero)
+head(results$predicted) 
+
+
+mse <- mean((results$actual-results$predicted)^2)
+mse
+
+#root mean
+x <- mse^0.5
+x
+
+#sum of squared error
+ sse <- sum((results$actual-results$predicted)^2)
+sse
+#sum of squared total
+sst <- sum((mean(df$G3)-results$actual)^2)
+
+R2 <- 1-sse/sst
+R2
+
+
+#linear regression proj
+df <- read.csv('C:/Users/singh/Documents/bikeshare.csv')
+head(df)
+df
+
+num.cols <- sapply(df, is.numeric)
+cor.data <- cor(df[,num.cols])
+as.data.frame(cor.data)
+df1 <-data.frame(df$temp,df$count)
+cor.data <- cor(df1)
+cor.data
+print(cor.data)
+print(corrplot(cor.data,method='color'))
+
+ggplot(df,aes(x=count))+geom_histogram(bins = 20,alpha=0.5,fill='blue')
+
+ggplot(df,aes(x=temp,y=count))+geom_point(alpha=0.5,aes(fill=temp,color=temp))
+
+df$datetime <- as.POSIXct(df$datetime)
+x <- ggplot(df,aes(x=datetime,y=count))+geom_point(alpha=0.5,aes(color=temp))+scale_color_continuous(low='orange',high='red')
+x
+
+x <- ggplot(df,aes(x=season,y=count))+geom_boxplot(aes(fill=factor(season)))
+install.packages("plotly")
+library(plotly)
+df$season <- data.frame(df$season)
+plot_ly(data=df1,x=df1$season,y=df1$count)
+df$hour <- sapply(df$datetime,function(x){format(x,"%H")})
+
+
+library(dplyr)
+df1 <- read.csv('C:/Users/singh/Documents/bikeshare.csv')
+time.stamp <- df1$datetime
+df1$hour <- sapply(df$datetime,function(x){format(x,"%H")})
+pl <- filter(df,df$workingday==1)
+a <-ggplot(pl,aes(hour,count))
+b <-a+geom_point(position=position_jitter(w=1, h=0),aes(color=temp))
+c <-b+scale_color_gradientn(colours = c('red','green','grey'))
+c
+
+
+df1
+#building model
+temp.model<- lm(count~temp,df1)
+temp.model
+summary(temp.model)
+
+
+
+temp.test <- data.frame(temp=c(25))
+head(temp.test)
+predict(temp.model,temp.test)
+
+x <- sapply(hour, as.numeric)
+
+model <- lm(count ~ . -casual - registered -datetime -atemp,df1 )
+summary(model)
+
+
+#logistics
+df.train <- read.csv('titanic_train.csv')
+df.test <-  read.csv('titanic_test.csv')
+head(df.train)
+library(ggplot2)
+install.packages('Amelia')
+library(Amelia)
+missmap(df.train,main = 'Main',col= c('yellow','black'),legend = FALSE)
+ggplot(df.train,aes(Survived))+geom_bar()
+ggplot(df.train,aes(Pclass))+geom_bar()
+ggplot(df.train,aes(Sex))+geom_bar()
+ggplot(df.train,aes(Age))+geom_histogram(color='blue',bins=20)
+ggplot(df.train,aes(SibSp))+geom_histogram()
+ggplot(df.train,aes(Fare))+geom_histogram()
+#mising Age value
+ggplot(df.train,aes(Pclass,Age))+geom_boxplot(aes(group=Pclass,fill=factor(Pclass)))+scale_y_continuous(breaks = seq(min(0),max(80),by=3))
+
+impute_age <- function(age,class){
+  
+  
+  out <- age
+  
+  for(i in 1:length(age)){
+     if(is.na(age[i])){
+        if(class[i]==1){
+         out[i] <- 37
+        }else if (class[i]==2){
+        out[i] <- 29
+        }else if (class[i]==3){
+        out[i] <- 24
+    }
+    
+  }else {
+    out[i] <- age[i]
+  }
+  }
+  return(out)
+
+}
+
+
+
+fixed.ages <- impute_age(df.train$Age,df.train$Pclass)
+df.train$Age <- fixed.ages
+df.train$Age
+missmap(df.train,main = 'Main',col= c('yellow','black'),legend = FALSE)
+str(df.train)
+library(dplyr)
+
+df.train <-select(df.train,-Name,-Cabin,-Ticket,-PassengerId)
+df.train
+head(df.train)
+str(df.train)
+df.train$Survived <- factor(df.train$Survived)
+df.train$Pclass <- factor(df.train$Pclass)
+df.train$Parch <- factor(df.train$Parch)
+df.train$SibSp <- factor(df.train$SibSp)
+ggplot(df.train,aes(SibSp))+geom_bar()
+str(df.train)
+log.model <- glm(Survived ~.,family = binomial(link = 'logit'),data = df.train)
+summary(log.model)
+
+
+
+#assignment
+
+df <- read.csv('adult_sal.csv')
+head(df)
+library(dplyr)
+df <- select(df,-X)
+head(df)
+str(df)
+summary(df)
+table(df$type_employer)
+library(Amelia)
+df1 <- missmap(df,main = 'Main',col= c('yellow','black'),legend = FALSE)
+str(df1)
+sum(is.na(df))
+
+unem <- function(job){
+  job <- as.character(job)
+  if(job== 'Never-worked' | job=='Without-pay'){
+    return('unempoyed')}
+  else if(job== 'Local-gov' | job=='State-gov'){
+    return('SL-gov')}
+   else if(job== 'Self-emp-inc' | job=='Self-emp-not-inc'){
+    return('self-emp')}
+  
+  else{
+    return(job)
+  }
+}
+
+df$type_employer <- sapply(df$type_employer,unem)
+table(df$type_employer)
+
+table(df$marital)
+
+df$marital <- sapply(df$marital,group_marital)
+table(df$marital)
+group_marital <- function(mar){
+  mar <- as.character(mar)
+  
+  # Not-Married
+  if (mar=='Separated' | mar=='Divorced' | mar=='Widowed'){
+    return('Not-Married')
+    
+    # Never-Married   
+  }else if(mar=='Never-married'){
+    return(mar)
+    
+    #Married
+  }else{
+    return('Married')
+  }
+}
+
+table(df$country)
+Asia <- c('China','Hong','India','Iran','Cambodia','Japan', 'Laos' ,
+          'Philippines' ,'Vietnam' ,'Taiwan', 'Thailand')
+
+North.America <- c('Canada','United-States','Puerto-Rico' )
+
+Europe <- c('England' ,'France', 'Germany' ,'Greece','Holand-Netherlands','Hungary',
+            'Ireland','Italy','Poland','Portugal','Scotland','Yugoslavia')
+
+Latin.and.South.America <- c('Columbia','Cuba','Dominican-Republic','Ecuador',
+                             'El-Salvador','Guatemala','Haiti','Honduras',
+                             'Mexico','Nicaragua','Outlying-US(Guam-USVI-etc)','Peru',
+                             'Jamaica','Trinadad&Tobago')
+Other <- c('South')
+
+country <- function(coun){
+  if(coun %in% Asia){
+    return('Asia')
+  }else if(coun %in% North.America){
+    return('North.America')
+  }else if(coun %in% Europe){
+    return('Europe')
+    }else if(coun %in% Latin.and.South.America){
+      return('Latin.and.South.America')
+    }else{
+      return('Other')
+    }
+}
+
+df$country <- sapply(df$country,country)
+str(df)
+library(Amelia)
+is.na(df)
+df[df == '?'] <- NA
+table(df$type_employer)
+df$type_employer <- sapply(df$type_employer,factor)
+df$country <- sapply(df$country,factor)
+df$marital <- sapply(df$marital,factor)
+df$occupation <- sapply(df$occupation,factor)
+
+missmap(df,legend = FALSE,col = c('Yellow','Black'))
+df <- na.omit(df)
+df
+missmap(df,legend = FALSE,col = c('Yellow','Black'))
+head(df)
+ggplot(df,aes(age)) + geom_histogram(aes(fill=income),color='black',binwidth=1) + theme_bw()
+ggplot(df,aes(x=age))+geom_histogram(aes(fill=income),binwidth = 1,color='black')
+ggplot(df,aes(x=hr_per_week))+geom_histogram()
+str(df)
+rename(df,replace=c('country'='Region'))
+
+names(df)[names(df)=="country"] <- "region"
+
+ggplot(df,aes(region))+geom_bar(aes(fill=income))+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+head(df)
+library(caTools)
+sample <- sample.split(df$income,SplitRatio = 0.70)
+df.train1 <- subset(df,sample==TRUE)
+df.test1  <- subset(df,sample==FALSE)
+df.test1
+log.model <- glm(income ~.,family = binomial(link = 'logit'),data = df.train1)
+summary(log.model)
+new.step <- step(log.model)
+
+summary(new.step)
+df.test1$predicted.income = predict(new.step, newdata=df.test1, type="response")
+fitted.results <- ifelse(df.test1$predicted.income > 0.5,1,0)
+x <- mean(fitted.results != df.test1$income )
+print(x)
+table(df.test1$income, df.test1$predicted.income > 0.5)
+accuracy <- (6469+1352)/(6460+460+943+1352)
+accuracy
+
+
+#K nearest mean
+install.packages('ISLR')
+library(ISLR)
+str(Caravan)
+#insurance company
+summary(Caravan$Purchase)
+any(is.na(Caravan))
+
+var(Caravan[1])
+
+standard <- scale(Caravan[,-86])
+var(standard[,1])
+purchase <- Caravan[,86]
+purchase
+
+test.index <- 1:1000
+test.data <- standard[test.index,]
+str(test.data)
+test.purchase <- purchase[test.index]
+
+
+train.data <- standard[-test.index,]
+train.purchase <- purchase[-test.index]
+
+#KNN MODEL
+library(class)
+# class lib contains KNN functions
+
+predicted.pur <- knn(train.data,test.data,train.purchase,k=1)
+head(predicted.pur)
+
+misserr <- mean(predicted.pur!= test.purchase)
+misserr
+
+
+misserr <- NULL
+predicted.pur <- NULL
+for(i in 1:20){
+  predicted.pur <- knn(train.data,test.data,train.purchase,k=i)
+  misserr[i] <- mean(predicted.pur!= test.purchase)
+ 
+  
+}
+print(misserr)
+k.value1 <-1:20
+x <- data.frame(misserr,k.value1)
+x
+
+ggplot(x,aes(x=k.value1,y=misserr))+geom_point()+geom_line(lty='dotted',color ='red')+theme_bw()+xlab('K value')
+# assingment 
+
+str(iris)
+standard <- scale(iris[,-5])
+var(standard[,1])
+purchase <- iris[,5]
+purchase
+
+df <- data.frame(standard,purchase)
+
+sample <- sample.split(df$purchase,SplitRatio = 0.7)
+train.data <- subset(df,sample==TRUE)
+test.data <- subset(df,sample==FALSE)
+
+
+
+
+predicted.pur <- knn(train.data[1:4],test.data[1:4],train.data$purchase,k=4)
+
+misserr <- mean(predicted.pur != test.data$purchase)
+
+print(misserr)
+predicted.pur <- NULL
+misserr <- NULL
+for(i in 1:10)
+{
+  predicted.pur <- knn(train.data[1:4],test.data[1:4],train.data$purchase,k=i)
+  misserr[i] <- mean(predicted.pur != test.data$purchase)
+  
+  
+}
+
+k.val <- 1:10
+y <- data.frame(k.val,misserr)
+y
+
+
+ggplot(y,aes(k.val,misserr))+geom_point()+geom_line(lty='dotted',color= 'red')
+
+
+#####Decision tree
+
+install.packages('rpart')
+library(rpart)
+str(kyphosis)
+tree <- rpart(Kyphosis ~., method = 'class',data=kyphosis)
+printcp(tree)
+plot(tree,uniform = TRUE,main='kyphosis')
+text(tree,use.n = T,all = T)
+install.packages('rpart.plot')
+library(rpart.plot)
+prp(tree)
+install.packages('randomForest')
+library(randomForest)
+rfmodel <- randomForest(Kyphosis ~ .,data = kyphosis)
+print(rfmodel)
+
+
+#assingment
+df <- College
+head(College)
+ggplot(df,aes(Room.Board,Grad.Rate))+geom_point(aes(color=Private))
+
+ggplot(df,aes(F.Undergrad))+geom_histogram(aes(fill=Private))
+
+ggplot(df,aes(Grad.Rate))+geom_histogram(aes(fill=Private),color='black')
+
+subset(df,Grad.Rate>100)
+
+df['Cazenovia College','Grad.Rate'] <-100
+
+library(caTools)
+df1 <- sample.split(df,SplitRatio = 0.7)
+train.data <- subset(df,df1==TRUE)
+test.data <- subset(df,df1==FALSE)
+
+tree <- rpart(Private ~., method = 'class',data=train.data)
+x1 <- predict(tree,test.data)
+train.data$Private
+
+x1 <- as.data.frame(x1)
+# Lots of ways to do this
+joiner <- function(x){
+  if (x>=0.5){
+    return('Yes')
+  }else{
+    return("No")
+  }
+}
+x1$Yes
+x1$Private <- sapply(x1$Yes,joiner)
+head(x1)
+table(x1$Private,test.data$Private)
+prp(tree)
+rfmodel <- randomForest(Private ~ .,data = train.data)
+print(rfmodel)
+
+rfmodel$importance
+p <- predict(rfmodel,test.data)
+table(p,test.data$Private)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
